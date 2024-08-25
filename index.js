@@ -44,6 +44,7 @@ const RED = '\x1b[31m';
 function FivePaisaClient(conf) {
   // Routes
   const BASE_URL = 'https://Openapi.5paisa.com/VendorsAPI/Service1.svc';
+  const PRE_ORDER_MARGIN_ROUTE = `${BASE_URL}/V1/PreOrdMarginCalculationVendor`
   const MARGIN_ROUTE = `${BASE_URL}/V4/Margin`;
   const ORDER_BOOK_ROUTE = `${BASE_URL}/V2/OrderBook`;
   const HOLDINGS_ROUTE = `${BASE_URL}/V3/Holding`;
@@ -407,7 +408,10 @@ function FivePaisaClient(conf) {
             } else {
               resolve(response.data.body.EquityMargin);
             }
-          });
+          }).catch((err) => {
+            //console.log(err);
+            reject("Error");
+        });
     });
 
     return promise;
@@ -890,6 +894,61 @@ function FivePaisaClient(conf) {
       try {
       request_instance
           .post(Market_ROUTE, payload, {headers: headers})
+          .then((response) => { 
+            if (response.data.body.Data === null ) {
+              resolve(response.data.body.Message);
+            } 
+            if(response.data.body.Data?.length === 0){
+              resolve(response.data.body.Message);
+            }
+            else {
+              resolve(response.data.body.Data);
+            }
+            
+          })
+          .catch((err) => 
+          reject());
+        } catch (err) {
+          console.error(err);
+        }
+    });
+  };
+
+  this.getPreOrderMargin = function(order) {
+
+    this.genericPayload.body.ClientCode = CLIENT_CODE;
+    // this.genericPayload.body.Exch = order.Exch;
+    // this.genericPayload.body.ExchType = order.ExchType;
+    // this.genericPayload.body.OrderRequestorCode = order.OrderRequestorCode;
+    // this.genericPayload.body.ScripCode = order.ScripCode;
+    // this.genericPayload.body.PlaceModifyCancel = order.PlaceModifyCancel;
+    // this.genericPayload.body.TransactionType = order.TransactionType;
+    // this.genericPayload.body.AtMarket = order.AtMarket;
+    // this.genericPayload.body.LimitRate = order.LimitRate;
+    // this.genericPayload.body.Volume = order.Volume;
+    // this.genericPayload.body.OldTradedQty = order.OldTradedQty;
+    // this.genericPayload.body.ProductType = order.ProductType;
+    // this.genericPayload.body.ExchOrderId = order.ExchOrderId;
+    // this.genericPayload.body.CoverPositions = order.CoverPositions;
+    this.genericPayload.body.OrderList = order;
+
+    const payload = this.genericPayload;
+
+    if (this.genericPayload.body.AtMarket == 'Y' && this.genericPayload.body.LimitRate != 0 ) {
+      console.error('Price must be 0');
+    }
+    else if (this.genericPayload.body.AtMarket == 'N' && this.genericPayload.body.LimitRate > 0 ) {
+      console.error('Price should not be 0');
+    }
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${jwttoken}`,
+    };
+
+    return new Promise(function(resolve, reject) {
+      try {
+      request_instance
+          .post(PRE_ORDER_MARGIN_ROUTE, payload, {headers: headers})
           .then((response) => { 
             if (response.data.body.Data === null ) {
               resolve(response.data.body.Message);
